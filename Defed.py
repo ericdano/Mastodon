@@ -25,9 +25,9 @@ def LoadCSV(defederation_csv_filename):
 
 def ProcessDomains(BlockList):
     ## Access Token
-    mytoken = ""
+    mytoken = "tokengoeshere"
     ### Instance URL
-    myinstance = ""
+    myinstance = "mydomain.social"
     '''
     Example from API
     [
