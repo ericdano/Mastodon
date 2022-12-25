@@ -5,13 +5,19 @@ from mastodon import Mastodon
 import pandas as pd
 import os, sys
 
-######
-## VARIABLES EDITINGS
+'''
+From your command line, 
 
-#
-### Defed List File Name.
-### Action to take. Current valid options: suspend, silence, limit
+python Defed.py csvfilename.csv
 
+Format of the CSV
+domain,severity,private_comment,public_comment
+Example would be
+domain,severity,private_comment,public_comment
+pieville.net,suspend,taken from a.rathersafe.space,"anti semitism, national socialism, racism, ableism, HomoMisia"
+
+Enjoy!
+'''
 
 def LoadCSV(defederation_csv_filename):
     DefederationList = pd.read_csv(defederation_csv_filename)
