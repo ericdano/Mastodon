@@ -1,6 +1,7 @@
 from mastodon import Mastodon, MastodonError
 import pandas as pd
-import os, sys
+import os, sys, json
+from pathlib import Path
 
 '''
 
@@ -21,6 +22,12 @@ This will currently update statuses if they are in your instance, so you can add
 
 Enjoy!
 '''
+#global configs
+home = Path.home() / ".MastodonAPI" / "appkey.json"
+confighome = Path.home() / ".MastodonAPI" / "appkey.json"
+with open(confighome) as f:
+  configs = json.load(f)
+
 
 def LoadCSV(defederation_csv_filename):
     DefederationList = pd.read_csv(defederation_csv_filename)
@@ -28,9 +35,11 @@ def LoadCSV(defederation_csv_filename):
 
 def ProcessDomains(BlockList):
     ## Access Token
-    mytoken = "TOKEN"
+    mytoken = configs['MastodonAccessToken']
     ### Instance URL
-    myinstance = "mydomain.social"
+    myinstance = configs['MastodonDomain']
+    print(mytoken)
+    print(myinstance)
     '''
     Example from API
     [
@@ -55,22 +64,28 @@ def ProcessDomains(BlockList):
         # first see if the domain is already in there, and if so, update it
         panda_row = listof[listof['domain'] == BlockList['domain'][i]].index.to_numpy()
         if panda_row.size > 0:
-            print('Updating Status Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Private_Comment->' + str(BlockList['private_comment'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
+            print('Updating Status Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
             try:
                 m.admin_update_domain_block(id=int(listof.iloc[panda_row]['id']),
                                             severity=BlockList['severity'][i],
-                                            private_comment=BlockList['private_comment'][i],
-                                            public_comment=BlockList['public_comment'][i])
+                                            #private_comment=BlockList['private_comment'][i],
+                                            public_comment=BlockList['public_comment'][i],
+                                            reject_media=BlockList['reject_media'][i],
+                                            reject_reports=BlockList['reject_reports'][i],
+                                            obfuscate=BlockList['obfuscate'][i])
             except MastodonError as e:
                 print(e)
         else:
             #ok not in instance, so lets add it
-            print('Adding Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Private_Comment->' + str(BlockList['private_comment'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
+            print('Adding Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
             try:
                 m.admin_create_domain_block(domain=str(BlockList['domain'][i]), 
                                             severity=BlockList['severity'][i],
-                                            private_comment=BlockList['private_comment'][i],
-                                            public_comment=BlockList['public_comment'][i])
+                                            #private_comment=BlockList['private_comment'][i],
+                                            public_comment=BlockList['public_comment'][i],
+                                            reject_media=BlockList['reject_media'][i],
+                                            reject_reports=BlockList['reject_reports'][i],
+                                            obfuscate=BlockList['obfuscate'][i])
             except MastodonError as e:
                 print(e)
 
