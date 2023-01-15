@@ -20,26 +20,53 @@ pieville.net,suspend,taken from a.rathersafe.space,"anti semitism, national soci
 
 This will currently update statuses if they are in your instance, so you can add public/private stuff or update if it is systemed or slienced or noop, OR add them if they are not in there.
 
+Added a .json configuration file, it lives in your home directory, .MastodonAPI/appkey.json
+
+This version will download the latest blocklist of your choosing from https://github.com/sgrigson/oliphant/tree/main/blocklists
+
+
+df = pd.read_csv('https://raw.githubusercontent.com/scpike/us-state-county-zip/master/geo-data.csv')
+
+Commandline to pick which list you want is coming shortly.
+
 Enjoy!
 '''
-#global configs
-home = Path.home() / ".MastodonAPI" / "appkey.json"
-confighome = Path.home() / ".MastodonAPI" / "appkey.json"
-with open(confighome) as f:
-  configs = json.load(f)
-
-
 def LoadCSV(defederation_csv_filename):
     DefederationList = pd.read_csv(defederation_csv_filename)
     return DefederationList
 
-def ProcessDomains(BlockList):
+def ConnectToMastodon(AccessToken,MastodonDomain):
     ## Access Token
-    mytoken = configs['MastodonAccessToken']
+    mytoken = AccessToken
     ### Instance URL
-    myinstance = configs['MastodonDomain']
+    myinstance = MastodonDomain
     print(mytoken)
     print(myinstance)
+    m = Mastodon(access_token=mytoken, api_base_url=myinstance)
+    return m
+
+def RemoveInstancesFromBlocklist(m_instance,BlockList,allblocks):
+    print(BlockList)
+    print(allblocks)
+    toremove_all = allblocks.merge(BlockList.drop_duplicates(), on=['domain'], how='left', indicator=True)
+    toremove = toremove_all[toremove_all['_merge'] == 'left_only']
+    print(toremove)
+    #str(BlockList['domain'][i]), 
+    for i in toremove.index:
+        try:
+            m_instance.admin_delete_domain_block(id=int(toremove['id'][i]))
+            print('Deleted->' + str(toremove['domain'][i]) + ' id->' + str(toremove['id'][i]))
+        except MastodonError as e:
+            print(e)
+
+def GetAllBlocks(m_instance):
+    blocks1 = m_instance.admin_domain_blocks()
+    listofallblocks = m_instance.fetch_remaining(blocks1)
+    listof = pd.DataFrame(listofallblocks)
+    return listof
+
+def ProcessDomains(m_instance,BlockList,listof):
+
     '''
     Example from API
     [
@@ -55,10 +82,7 @@ def ProcessDomains(BlockList):
     "obfuscate": false
   },
     '''
-    m = Mastodon(access_token=mytoken, api_base_url=myinstance)
-    blocks1 = m.admin_domain_blocks()
-    listofallblocks = m.fetch_remaining(blocks1)
-    listof = pd.DataFrame(listofallblocks)
+
     # convert to Pandas cuz Pandas is kwel
     for i in BlockList.index:
         # first see if the domain is already in there, and if so, update it
@@ -66,7 +90,7 @@ def ProcessDomains(BlockList):
         if panda_row.size > 0:
             print('Updating Status Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
             try:
-                m.admin_update_domain_block(id=int(listof.iloc[panda_row]['id']),
+                m_instance.admin_update_domain_block(id=int(listof.iloc[panda_row]['id']),
                                             severity=BlockList['severity'][i],
                                             #private_comment=BlockList['private_comment'][i],
                                             public_comment=BlockList['public_comment'][i],
@@ -79,7 +103,7 @@ def ProcessDomains(BlockList):
             #ok not in instance, so lets add it
             print('Adding Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
             try:
-                m.admin_create_domain_block(domain=str(BlockList['domain'][i]), 
+                m_instance.admin_create_domain_block(domain=str(BlockList['domain'][i]), 
                                             severity=BlockList['severity'][i],
                                             #private_comment=BlockList['private_comment'][i],
                                             public_comment=BlockList['public_comment'][i],
@@ -90,9 +114,38 @@ def ProcessDomains(BlockList):
                 print(e)
 
 if __name__ == '__main__':
+    '''
     if len(sys.argv) < 2:
-        print('Need a csv filename')
+        print('You Need to specify a BlockList')
         sys.exit()
-    BlockList = LoadCSV(sys.argv[1])
-    ProcessDomains(BlockList)
+    else
+        thelists = pd.DataFrame([{'unified_max_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_max_blocklist.csv',
+                                'unified_min_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_min_blocklist.csv',
+                                'unified_tier0_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_tier0_blocklist.csv',
+                                'unified_tier1_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_tier1_blocklist.csv',
+                                'unified_tier2_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_tier2_blocklist.csv',
+                                'unified_tier3_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_tier3_blocklist.csv',
+                                'artisan.chat':'https://github.com/sgrigson/oliphant/blob/main/blocklists/artisan.chat.csv',
+                                'rapidblock.org-blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/https:--rapidblock.org-blocklist.json.csv',
+                                'mastodon.art':'https://github.com/sgrigson/oliphant/blob/main/blocklists/mastodon.art.csv',
+                                'mastodon.online':'https://github.com/sgrigson/oliphant/blob/main/blocklists/mastodon.online.csv',
+                                'mastodon.social':'https://github.com/sgrigson/oliphant/blob/main/blocklists/mastodon.social.csv',
+                                'oliphant.social':'https://github.com/sgrigson/oliphant/blob/main/blocklists/oliphant.social.csv',
+                                'rage.love':'https://github.com/sgrigson/oliphant/blob/main/blocklists/rage.love.csv',
+                                'toot.wales':'https://github.com/sgrigson/oliphant/blob/main/blocklists/toot.wales.csv',
+                                'union.place':"https://github.com/sgrigson/oliphant/blob/main/blocklists/union.place.csv"}])
+        for i in thelists.index:
+            # first see if the domain is already in there, and if so, update it
+            pd_row = listof[listof['domain'] == BlockList['domain'][i]].index.to_numpy()
+'''
+    home = Path.home() / ".MastodonAPI" / "appkey.json"
+    confighome = Path.home() / ".MastodonAPI" / "appkey.json"
+    with open(confighome) as f:
+        configs = json.load(f)
+        #BlockList = LoadCSV(sys.argv[1])
+    BlockList = pd.read_csv('https://raw.githubusercontent.com/sgrigson/oliphant/main/blocklists/_unified_min_blocklist.csv')
+    m_instance = ConnectToMastodon(configs['MastodonAccessToken'],configs['MastodonDomain'])
+    allblocks = GetAllBlocks(m_instance)
+    RemoveInstancesFromBlocklist(m_instance,BlockList,allblocks)
+    ProcessDomains(m_instance,BlockList,allblocks)
 
