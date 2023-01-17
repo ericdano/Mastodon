@@ -106,6 +106,7 @@ def ProcessDomains(m_instance,BlockList,listof):
     # convert to Pandas cuz Pandas is kwel
     for i in BlockList.index:
         # first see if the domain is already in there, and if so, update it
+        listof = listof.replace(np.nan,None)
         panda_row = listof[listof['domain'] == BlockList['domain'][i]].index.to_numpy()
         if panda_row.size > 0:
             print('Updating Status Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
