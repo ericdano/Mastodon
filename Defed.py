@@ -46,8 +46,10 @@ def ConnectToMastodon(AccessToken,MastodonDomain):
     return m
 
 def RemoveInstancesFromBlocklist(m_instance,BlockList,allblocks):
-    print(BlockList)
-    print(allblocks)
+    '''
+    Do a little bit of pandas magic to find the sites that are not in the current block list. 
+    Then we go delete them
+    '''
     toremove_all = allblocks.merge(BlockList.drop_duplicates(), on=['domain'], how='left', indicator=True)
     toremove = toremove_all[toremove_all['_merge'] == 'left_only']
     print(toremove)
@@ -64,6 +66,24 @@ def GetAllBlocks(m_instance):
     listofallblocks = m_instance.fetch_remaining(blocks1)
     listof = pd.DataFrame(listofallblocks)
     return listof
+
+def ProcessDomains2(BlockList,currentblocks):
+    print(BlockList)
+    print(currentblocks)
+    '''
+    This one finds things not in current block list. So new additions coming from csv
+    df_all = BlockList.merge(currentblocks.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media','obfuscate'], how='left', indicator=True)
+    '''
+    df_all = currentblocks.merge(BlockList.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media','obfuscate'], how='left', indicator=True)
+    print('----DF All------------')
+    print(df_all)
+    print('-----DF Merge-------')
+    print(df_all.loc[df_all['_merge'] != 'left_only'])
+    df2_all = BlockList.merge(currentblocks.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media','obfuscate'], how='left', indicator=True)
+    print('-----DF2 All-------')
+    print(df2_all)
+    print('-----DF2 Merge-------')
+    print(df2_all.loc[df2_all['_merge'] != 'left_only'])
 
 def ProcessDomains(m_instance,BlockList,listof):
 
@@ -147,5 +167,6 @@ if __name__ == '__main__':
     m_instance = ConnectToMastodon(configs['MastodonAccessToken'],configs['MastodonDomain'])
     allblocks = GetAllBlocks(m_instance)
     RemoveInstancesFromBlocklist(m_instance,BlockList,allblocks)
+    #ProcessDomains2(BlockList,allblocks)
     ProcessDomains(m_instance,BlockList,allblocks)
 
