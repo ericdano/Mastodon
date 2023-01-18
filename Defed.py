@@ -106,15 +106,16 @@ def ProcessDomains(m_instance,BlockList,listof):
     # convert to Pandas cuz Pandas is kwel
     for i in BlockList.index:
         # first see if the domain is already in there, and if so, update it
-        listof = listof.replace(np.nan,None)
+        #listof = listof.replace(np.nan,None)
         panda_row = listof[listof['domain'] == BlockList['domain'][i]].index.to_numpy()
         if panda_row.size > 0:
             print('Updating Status Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
             try:
                 m_instance.admin_update_domain_block(id=int(listof.iloc[panda_row]['id']),
                                             severity=BlockList['severity'][i],
+                                            public_comment="",
                                             #private_comment=BlockList['private_comment'][i],
-                                            public_comment=BlockList['public_comment'][i],
+                                            #public_comment=BlockList['public_comment'][i],
                                             reject_media=BlockList['reject_media'][i],
                                             reject_reports=BlockList['reject_reports'][i],
                                             obfuscate=BlockList['obfuscate'][i])
@@ -127,7 +128,8 @@ def ProcessDomains(m_instance,BlockList,listof):
                 m_instance.admin_create_domain_block(domain=str(BlockList['domain'][i]), 
                                             severity=BlockList['severity'][i],
                                             #private_comment=BlockList['private_comment'][i],
-                                            public_comment=BlockList['public_comment'][i],
+                                            public_comment='',
+                                            #public_comment=BlockList['public_comment'][i],
                                             reject_media=BlockList['reject_media'][i],
                                             reject_reports=BlockList['reject_reports'][i],
                                             obfuscate=BlockList['obfuscate'][i])
