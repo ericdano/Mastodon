@@ -166,10 +166,13 @@ if __name__ == '__main__':
     with open(confighome) as f:
         configs = json.load(f)
         #BlockList = LoadCSV(sys.argv[1])
-    BlockList = pd.read_csv('https://raw.githubusercontent.com/sgrigson/oliphant/main/blocklists/_unified_min_blocklist.csv')
+    BlockList = pd.read_csv('https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/_unified_min_blocklist.csv')
     m_instance = ConnectToMastodon(configs['MastodonAccessToken'],configs['MastodonDomain'])
+    print('Getting current blocks from server')
     allblocks = GetAllBlocks(m_instance)
+    print('Removing blocks that are not on the list anymore')
     RemoveInstancesFromBlocklist(m_instance,BlockList,allblocks)
     #ProcessDomains2(BlockList,allblocks)
+    print('Updating new blocks')
     ProcessDomains(m_instance,BlockList,allblocks)
 
