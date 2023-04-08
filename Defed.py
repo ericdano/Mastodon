@@ -68,22 +68,26 @@ def GetAllBlocks(m_instance):
     return listof
 
 def ProcessDomains2(BlockList,currentblocks):
+    print('CSV Block List')
     print(BlockList)
+    print('Mastodon Blocks')
     print(currentblocks)
     '''
     This one finds things not in current block list. So new additions coming from csv
-    df_all = BlockList.merge(currentblocks.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media','obfuscate'], how='left', indicator=True)
+    df_all = BlockList.merge(currentblocks.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media'], how='left', indicator=True)
     '''
-    df_all = currentblocks.merge(BlockList.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media','obfuscate'], how='left', indicator=True)
+    #df_all = currentblocks.merge(BlockList.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media'], how='left', indicator=True)
+    #df_all = pd.concat([BlockList,currentblocks]).drop_duplicates(keep=False)
+    df_all = BlockList.compare(currentblocks)
     print('----DF All------------')
     print(df_all)
-    print('-----DF Merge-------')
-    print(df_all.loc[df_all['_merge'] != 'left_only'])
-    df2_all = BlockList.merge(currentblocks.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media','obfuscate'], how='left', indicator=True)
-    print('-----DF2 All-------')
-    print(df2_all)
-    print('-----DF2 Merge-------')
-    print(df2_all.loc[df2_all['_merge'] != 'left_only'])
+    #print('-----DF Merge-------')
+    #print(df_all.loc[df_all['_merge'] != 'left_only'])
+    #df2_all = BlockList.merge(currentblocks.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media'], how='left', indicator=True)
+    ##print('-----DF2 All-------')
+    #print(df2_all)
+    #print('-----DF2 Merge-------')
+    #print(df2_all.loc[df2_all['_merge'] != 'left_only'])
 
 def ProcessDomains(m_instance,BlockList,listof):
 
@@ -101,6 +105,9 @@ def ProcessDomains(m_instance,BlockList,listof):
     "public_comment": null,
     "obfuscate": false
   },
+    m_instance is the connection to Mastodon
+    BlockList is the CSV downloaded list of blocks
+    listof is the Mastodon server's list of blocks.
     '''
 
     # convert to Pandas cuz Pandas is kwel
@@ -108,8 +115,14 @@ def ProcessDomains(m_instance,BlockList,listof):
         # first see if the domain is already in there, and if so, update it
         #listof = listof.replace(np.nan,None)
         panda_row = listof[listof['domain'] == BlockList['domain'][i]].index.to_numpy()
+        #panda_row = listof.loc[listof['domain'].str.match(str(BlockList['domain'][i]))]
+        #print(panda_row)
         if panda_row.size > 0:
+#            if str(BlockList['severity'][i]) != str(listof['severity'][panda_row]):
             print('Updating Status Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
+            #print(str(BlockList['domain'][i]) + ' ' + str(BlockList['severity'][i]))
+            #print('----')
+            #print(str(listof['domain'][panda_row]) + ' ' + str(listof['severity'][panda_row]))
             try:
                 m_instance.admin_update_domain_block(id=int(listof.iloc[panda_row]['id']),
                                             severity=BlockList['severity'][i],
@@ -121,6 +134,8 @@ def ProcessDomains(m_instance,BlockList,listof):
                                             obfuscate=BlockList['obfuscate'][i])
             except MastodonError as e:
                 print(e)
+#            else:
+#                print('severity has not changed, skipping updating')
         else:
             #ok not in instance, so lets add it
             print('Adding Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
@@ -169,10 +184,12 @@ if __name__ == '__main__':
     BlockList = pd.read_csv('https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/_unified_min_blocklist.csv')
     m_instance = ConnectToMastodon(configs['MastodonAccessToken'],configs['MastodonDomain'])
     print('Getting current blocks from server')
-    allblocks = GetAllBlocks(m_instance)
+    instanceblocks = GetAllBlocks(m_instance)
+    #instanceblocks = instanceblocks.drop(['id','obfuscate','public_comment','private_comment','created_at'], axis=1)
+    #BlockList = BlockList.drop(['public_comment','obfuscate'], axis=1)
     print('Removing blocks that are not on the list anymore')
-    RemoveInstancesFromBlocklist(m_instance,BlockList,allblocks)
-    #ProcessDomains2(BlockList,allblocks)
+    RemoveInstancesFromBlocklist(m_instance,BlockList,instanceblocks)
+    #ProcessDomains2(BlockList,instanceblocks)
     print('Updating new blocks')
-    ProcessDomains(m_instance,BlockList,allblocks)
+    ProcessDomains(m_instance,BlockList,instanceblocks)
 
