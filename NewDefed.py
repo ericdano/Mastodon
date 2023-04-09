@@ -4,7 +4,10 @@ import os, sys, json
 from pathlib import Path
 
 '''
+Takes an argument to figure out what blocklist to load, then syncs it with your instance.
 
+
+Based on 
 # Original -> Masto Defederation tool by Clarjon1!
 # Public domain code, remix and do as ye will. Please be kind!
 
@@ -121,40 +124,48 @@ def ProcessDomains(m_instance,BlockList,SiteBlockList):
             except MastodonError as e:
                 print(e)
 if __name__ == '__main__':
-    '''
+    
     if len(sys.argv) < 2:
         print('You Need to specify a BlockList')
         sys.exit()
-    else
-        thelists = pd.DataFrame([{'unified_max_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_max_blocklist.csv',
-                                'unified_min_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_min_blocklist.csv',
-                                'unified_tier0_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_tier0_blocklist.csv',
-                                'unified_tier1_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_tier1_blocklist.csv',
-                                'unified_tier2_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_tier2_blocklist.csv',
-                                'unified_tier3_blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/_unified_tier3_blocklist.csv',
-                                'artisan.chat':'https://github.com/sgrigson/oliphant/blob/main/blocklists/artisan.chat.csv',
-                                'rapidblock.org-blocklist':'https://github.com/sgrigson/oliphant/blob/main/blocklists/https:--rapidblock.org-blocklist.json.csv',
-                                'mastodon.art':'https://github.com/sgrigson/oliphant/blob/main/blocklists/mastodon.art.csv',
-                                'mastodon.online':'https://github.com/sgrigson/oliphant/blob/main/blocklists/mastodon.online.csv',
-                                'mastodon.social':'https://github.com/sgrigson/oliphant/blob/main/blocklists/mastodon.social.csv',
-                                'oliphant.social':'https://github.com/sgrigson/oliphant/blob/main/blocklists/oliphant.social.csv',
-                                'rage.love':'https://github.com/sgrigson/oliphant/blob/main/blocklists/rage.love.csv',
-                                'toot.wales':'https://github.com/sgrigson/oliphant/blob/main/blocklists/toot.wales.csv',
-                                'union.place':"https://github.com/sgrigson/oliphant/blob/main/blocklists/union.place.csv"}])
-        for i in thelists.index:
-            # first see if the domain is already in there, and if so, update it
-            pd_row = listof[listof['domain'] == BlockList['domain'][i]].index.to_numpy()
-'''
-    home = Path.home() / ".MastodonAPI" / "appkey.json"
-    confighome = Path.home() / ".MastodonAPI" / "appkey.json"
-    with open(confighome) as f:
-        configs = json.load(f)
-    BlockList = pd.read_csv('https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/_unified_min_blocklist.csv')
-    m_instance = ConnectToMastodon(configs['MastodonAccessToken'],configs['MastodonDomain'])
-    print('Getting current blocks from server')
-    instanceblocks = GetAllBlocks(m_instance)
-    print('Removing blocks that are not on the list anymore')
-    RemoveInstancesFromBlocklist(m_instance,BlockList,instanceblocks)
-    print('Updating new blocks')
-    ProcessDomains(m_instance,BlockList,instanceblocks)
+    else:
+        thelists = [['unified_max_blocklist','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/_unified_max_blocklist.csv'],
+                ['unified_min_blocklist','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/_unified_min_blocklist.csv'],
+                ['unified_tier0_blocklist','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/_unified_tier0_blocklist.csv'],
+                ['unified_tier1_blocklist','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/_unified_tier1_blocklist.csv'],
+                ['unified_tier2_blocklist','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/_unified_tier2_blocklist.csv'],
+                ['unified_tier3_blocklist','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/_unified_tier3_blocklist.csv'],
+                ['artisan.chat','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/artisan.chat.csv'],
+                ['rapidblock.org-blocklist','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/https:--rapidblock.org-blocklist.json.csv'],
+                ['mastodon.art','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/mastodon.art.csv'],
+                ['mastodon.online','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/mastodon.online.csv'],
+                ['mastodon.social','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/mastodon.social.csv'],
+                ['oliphant.social','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/oliphant.social.csv'],
+                ['rage.love','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/rage.love.csv'],
+                ['toot.wales','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/toot.wales.csv'],
+                ['union.place','https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/union.place.csv']]
+        csvlistname = sys.argv[1]
+        whatlist = ""
+        for row in thelists:
+            if row[0] == csvlistname:
+                whatlist = row[1]
+        if whatlist =="":
+            print('That list is not available, please choose a list and run again')
+            print(thelists)
+        else:
+            print('Loading -->' + whatlist)
+            home = Path.home() / ".MastodonAPI" / "appkey.json"
+            confighome = Path.home() / ".MastodonAPI" / "appkey.json"
+            with open(confighome) as f:
+                configs = json.load(f)
+            #BlockList = pd.read_csv('https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/_unified_min_blocklist.csv')
+            BlockList = pd.read_csv(whatlist)
+            m_instance = ConnectToMastodon(configs['MastodonAccessToken'],configs['MastodonDomain'])
+            print('Getting current blocks from server ' + configs['MastodonDomain'])
+            instanceblocks = GetAllBlocks(m_instance)
+            print('Removing blocks that are not on the list anymore')
+            RemoveInstancesFromBlocklist(m_instance,BlockList,instanceblocks)
+            print('Updating new blocks')
+            ProcessDomains(m_instance,BlockList,instanceblocks)
+            print('Done!!!')
 
