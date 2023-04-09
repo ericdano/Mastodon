@@ -67,28 +67,6 @@ def GetAllBlocks(m_instance):
     listof = pd.DataFrame(listofallblocks)
     return listof
 
-def ProcessDomains2(BlockList,currentblocks):
-    print('CSV Block List')
-    print(BlockList)
-    print('Mastodon Blocks')
-    print(currentblocks)
-    '''
-    This one finds things not in current block list. So new additions coming from csv
-    df_all = BlockList.merge(currentblocks.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media'], how='left', indicator=True)
-    '''
-    #df_all = currentblocks.merge(BlockList.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media'], how='left', indicator=True)
-    #df_all = pd.concat([BlockList,currentblocks]).drop_duplicates(keep=False)
-    df_all = BlockList.compare(currentblocks)
-    print('----DF All------------')
-    print(df_all)
-    #print('-----DF Merge-------')
-    #print(df_all.loc[df_all['_merge'] != 'left_only'])
-    #df2_all = BlockList.merge(currentblocks.drop_duplicates(), on = ['domain','severity','reject_reports','reject_media'], how='left', indicator=True)
-    ##print('-----DF2 All-------')
-    #print(df2_all)
-    #print('-----DF2 Merge-------')
-    #print(df2_all.loc[df2_all['_merge'] != 'left_only'])
-
 def ProcessDomains(m_instance,BlockList,SiteBlockList):
 
     '''
@@ -112,37 +90,22 @@ def ProcessDomains(m_instance,BlockList,SiteBlockList):
 
     # convert to Pandas cuz Pandas is kwel
     for i in BlockList.index:
-        # first see if the domain is already in there, and if so, update it
-        #listof = SiteBlockList.replace(np.nan,None)
-        panda_row = SiteBlockList[SiteBlockList['domain'] == BlockList['domain'][i]].index.to_numpy()
-        #panda_row = SiteBlockList.loc[SiteBlockList['domain'].str.match(str(BlockList['domain'][i]))]
-        #print(panda_row)
-        if panda_row.size > 0:
-            # Ok, the domain is in the current block list, let's check if the severity is the same
-#            if str(BlockList['severity'][i]) != str(SiteBlockList['severity'][panda_row]):
-            print('Updating Status Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
-            #if str(BlockList['severity'][i]) == str(SiteBlockList.iloc[panda_row]['severity']):
-            #    print('Severity is the same.' + str(BlockList['severity'][i]) + ' ' + str(SiteBlockList.iloc[panda_row]['severity']))
-            ##else:
-            #    print('Severity is the different. ' + str(BlockList['severity'][i]) + ' ' + str(SiteBlockList.iloc[panda_row]['severity']))
-            #print(str(BlockList['domain'][i]) + ' ' + str(BlockList['severity'][i]))
-            #print('----')
-            #print(str(SiteBlockList['domain'][panda_row]) + ' ' + str(SiteBlockList['severity'][panda_row]))
-            
-            try:
-                m_instance.admin_update_domain_block(id=int(SiteBlockList.iloc[panda_row]['id']),
-                                            severity=BlockList['severity'][i],
-                                            public_comment="",
-                                            #private_comment=BlockList['private_comment'][i],
-                                            #public_comment=BlockList['public_comment'][i],
-                                            reject_media=BlockList['reject_media'][i],
-                                            reject_reports=BlockList['reject_reports'][i],
-                                            obfuscate=BlockList['obfuscate'][i])
-            except MastodonError as e:
-                print(e)
-#            else:
-#                print('severity has not changed, skipping updating')
-            
+        # first see if the domain is already in there, and if so, see if it needs to be updated
+        panda_row = SiteBlockList[SiteBlockList['domain'].str.match(BlockList['domain'][i])]
+        if not(panda_row.empty):
+            if not(panda_row['severity'].iloc[0] == BlockList['severity'][i]):
+                print('Different severity. Updating Status Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))     
+                try:
+                    m_instance.admin_update_domain_block(id=panda_row['id'].iloc[0],
+                                                severity=BlockList['severity'][i],
+                                                public_comment="",
+                                                #private_comment=BlockList['private_comment'][i],
+                                                #public_comment=BlockList['public_comment'][i],
+                                                reject_media=BlockList['reject_media'][i],
+                                                reject_reports=BlockList['reject_reports'][i],
+                                                obfuscate=BlockList['obfuscate'][i])
+                except MastodonError as e:
+                    print(e)
         else:
             #ok not in instance, so lets add it
             print('Adding Domain->' + str(BlockList['domain'][i]) + ' Severity->' + str(BlockList['severity'][i]) + ' Public_comment->' + str(BlockList['public_comment'][i]))
@@ -157,7 +120,6 @@ def ProcessDomains(m_instance,BlockList,SiteBlockList):
                                             obfuscate=BlockList['obfuscate'][i])
             except MastodonError as e:
                 print(e)
-
 if __name__ == '__main__':
     '''
     if len(sys.argv) < 2:
@@ -187,16 +149,12 @@ if __name__ == '__main__':
     confighome = Path.home() / ".MastodonAPI" / "appkey.json"
     with open(confighome) as f:
         configs = json.load(f)
-        #BlockList = LoadCSV(sys.argv[1])
     BlockList = pd.read_csv('https://codeberg.org/oliphant/blocklists/raw/branch/main/blocklists/_unified_min_blocklist.csv')
     m_instance = ConnectToMastodon(configs['MastodonAccessToken'],configs['MastodonDomain'])
     print('Getting current blocks from server')
     instanceblocks = GetAllBlocks(m_instance)
-    #instanceblocks = instanceblocks.drop(['id','obfuscate','public_comment','private_comment','created_at'], axis=1)
-    #BlockList = BlockList.drop(['public_comment','obfuscate'], axis=1)
     print('Removing blocks that are not on the list anymore')
     RemoveInstancesFromBlocklist(m_instance,BlockList,instanceblocks)
-    #ProcessDomains2(BlockList,instanceblocks)
     print('Updating new blocks')
     ProcessDomains(m_instance,BlockList,instanceblocks)
 
