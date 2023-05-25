@@ -90,7 +90,6 @@ def ProcessDomains(m_instance,BlockList,SiteBlockList):
     BlockList is the CSV downloaded list of blocks
     listof is the Mastodon server's list of blocks.
     '''
-
     # convert to Pandas cuz Pandas is kwel
     for i in BlockList.index:
         # first see if the domain is already in there, and if so, see if it needs to be updated
